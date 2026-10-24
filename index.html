@@ -1,0 +1,77 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://api.github.com; img-src data: blob: https://raw.githubusercontent.com; form-action 'none'; base-uri 'none'">
+<title>HASH iNf · Admin</title>
+<style>
+:root{--s:#b86bff;--r:#5b21b6;--p:#f6f3fb;--c:#121216;--c2:#1b1b22;--l:rgba(184,107,255,.28);color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--c);color:var(--p);font:500 1.05rem/1.5 'Segoe UI',system-ui,sans-serif;padding:1rem}
+.w{max-width:60rem;margin:0 auto}h1,h2{font-family:'Arial Narrow',Impact,sans-serif;text-transform:uppercase;letter-spacing:.08em;margin:.3rem 0 1rem;background:linear-gradient(90deg,var(--s),var(--p));-webkit-background-clip:text;background-clip:text;color:transparent}
+.card{background:var(--c2);border:1px solid var(--l);border-radius:.8rem;padding:1rem;margin-bottom:1rem}
+input,select,textarea{width:100%;background:var(--c);border:1px solid var(--l);color:var(--p);border-radius:.4rem;padding:.6rem .8rem;font:inherit;margin:.25rem 0 .6rem}
+label{font-size:.85rem;opacity:.75}button{cursor:pointer;border:1px solid var(--s);background:linear-gradient(135deg,var(--r),var(--s));color:#fff;padding:.55rem 1.1rem;border-radius:.4rem;font:600 .95rem 'Segoe UI',sans-serif}
+button.g{background:none}button.sm{padding:.3rem .8rem;font-size:.85rem}.g2{display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))}
+.it{display:flex;gap:.8rem;align-items:center;border:1px solid var(--l);border-radius:.6rem;padding:.6rem;margin-bottom:.5rem}.it img,.it .ph{width:80px;height:56px;object-fit:cover;border-radius:.4rem;background:#000;display:grid;place-items:center;font-size:1.6rem;flex:none}.m{flex:1;min-width:0;overflow-wrap:anywhere}small{opacity:.65}
+.tb{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}.on{outline:2px solid var(--p)}#msg{position:sticky;top:.5rem;z-index:5;background:var(--c);padding:.2rem 0}.ok{color:#8f8}.er{color:#f88}
+</style></head><body><div class="w">
+<h1>HASH iNf · Admin</h1><div id="msg"></div>
+<div id="setup" class="card"><h2 style="font-size:1.3rem">Connect to your site repo</h2>
+<div class="g2"><div><label>GitHub username / org</label><input id="o" autocomplete="off"></div><div><label>Site repository name</label><input id="r" placeholder="hash-site" autocomplete="off"></div><div><label>Branch</label><input id="b" value="main"></div></div>
+<label>Fine-grained token (Contents: read &amp; write, this repo only)</label><input id="t" type="password" autocomplete="off">
+<label><input id="rem" type="checkbox" style="width:auto"> Remember on this device (otherwise cleared when the tab closes)</label><br><br>
+<button id="go">Connect</button></div>
+<div id="app" style="display:none">
+<div class="card"><b id="who"></b> <button class="g sm" id="out">Disconnect</button></div>
+<div class="tb"><button id="tA" class="sm on">Assets</button><button id="tR" class="sm g">Reviews</button></div>
+<div id="vA"><div class="card"><h2 style="font-size:1.3rem">Upload asset</h2>
+<div class="g2"><div><label>Brand</label><select id="ub"><option value="infpirex">iNfpirex · artwork</option><option value="infyzora">iNfyzora · software</option><option value="inframex">iNframex · photo/video</option><option value="infysona">iNfysona · audio</option></select></div>
+<div><label>Type</label><select id="up"><option value="">Gallery item</option><option value="windows">Download: Windows</option><option value="android">Download: Android</option><option value="ios">Download: iOS</option></select></div></div>
+<div class="g2"><div><label>Title</label><input id="ut" maxlength="80"></div><div><label>Short description</label><input id="ud" maxlength="200"></div></div>
+<label>File (png jpg webp gif svg mp4 webm mp3 wav ogg m4a pdf zip exe msi apk ipa — max 25 MB)</label><input id="uf" type="file"><button id="ubtn">Upload &amp; publish</button></div>
+<div class="tb" id="flt"></div><div id="items"></div></div>
+<div id="vR" style="display:none"><div class="card"><h2 style="font-size:1.3rem">Add review</h2>
+<div class="g2"><div><label>Brand</label><select id="rb"><option>iNfpirex™</option><option>iNfyzora™</option><option>iNframex™</option><option>iNfysona™</option></select></div><div><label>Name</label><input id="rn" maxlength="40"></div><div><label>Stars</label><select id="rs"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></div></div>
+<label>Comment</label><textarea id="rc" rows="2" maxlength="240"></textarea><button id="rbtn">Publish review</button></div><div id="rvs"></div></div>
+</div></div>
+<script>
+const $=s=>document.querySelector(s),API='https://api.github.com',OK=/\.(png|jpe?g|webp|gif|svg|mp4|webm|mp3|wav|ogg|m4a|pdf|zip|exe|msi|apk|ipa)$/i,MAX=25*1024*1024;
+let C=null,D={items:[],reviews:[]},F='all';
+const say=(t,e)=>{const m=$('#msg');m.className=e?'er':'ok';m.textContent=t};
+function el(t,p={},...k){const e=document.createElement(t);Object.assign(e,p);k.flat().forEach(c=>e.append(c));return e}
+const b64=s=>{let x='';new TextEncoder().encode(s).forEach(c=>x+=String.fromCharCode(c));return btoa(x)};
+const unb64=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g,'')),c=>c.charCodeAt(0)));
+async function gh(path,o={}){const m=o.method||'GET',u=`${API}/repos/${C.o}/${C.r}/contents/${path.split('/').map(encodeURIComponent).join('/')}${m==='GET'?'?ref='+encodeURIComponent(C.b):''}`;
+ const r=await fetch(u,{...o,cache:'no-store',headers:{Authorization:'Bearer '+C.t,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}});
+ const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.message||r.status);e.status=r.status;throw e}return j}
+async function readDB(){try{const j=await gh('content.json');return{sha:j.sha,data:JSON.parse(unb64(j.content))}}catch(e){if(e.status===404)return{sha:null,data:{items:[],reviews:[]}};throw e}}
+async function saveDB(fn,msg){for(let i=0;i<3;i++){const{sha,data}=await readDB();data.items=data.items||[];data.reviews=data.reviews||[];fn(data);
+ try{await gh('content.json',{method:'PUT',body:JSON.stringify({message:msg,branch:C.b,content:b64(JSON.stringify(data,null,1)),...(sha?{sha}:{})})});D=data;return}catch(e){if(e.status!==409&&e.status!==422)throw e}}throw new Error('Could not save content.json (conflict). Try again.')}
+const raw=f=>`https://raw.githubusercontent.com/${C.o}/${C.r}/${C.b}/${f}`;
+function draw(){$('#flt').replaceChildren(...['all','infpirex','infyzora','inframex','infysona'].map(b=>el('button',{className:'sm'+(b===F?'':' g'),textContent:b,onclick:()=>{F=b;draw()}})));
+ $('#items').replaceChildren(...(D.items||[]).filter(i=>F==='all'||i.brand===F).map(i=>el('div',{className:'it'},
+  i.type==='image'?el('img',{src:raw(i.file),alt:'',loading:'lazy'}):el('div',{className:'ph',textContent:i.type==='video'?'▶':i.type==='audio'?'♪':'⬇'}),
+  el('div',{className:'m'},el('b',{textContent:i.title}),el('br'),el('small',{textContent:`${i.brand} · ${i.type}${i.platform?' · '+i.platform:''}`})),
+  el('button',{className:'sm g',textContent:'Rename',onclick:()=>act(async()=>{const t=prompt('New title',i.title);if(t)await saveDB(d=>{d.items.find(x=>x.id===i.id).title=t.slice(0,80)},'Rename '+i.title)},'Renamed')}),
+  el('button',{className:'sm g',textContent:'Delete',onclick:()=>act(async()=>{if(!confirm('Delete "'+i.title+'" permanently?'))return;
+   try{const j=await gh(i.file);await gh(i.file,{method:'DELETE',body:JSON.stringify({message:'Delete '+i.title,branch:C.b,sha:j.sha})})}catch(e){if(e.status!==404)throw e}
+   await saveDB(d=>{d.items=d.items.filter(x=>x.id!==i.id)},'Remove '+i.title)},'Deleted')}))));
+ $('#rvs').replaceChildren(...((D.reviews||[]).length?D.reviews:[null]).map(r=>r?el('div',{className:'it'},el('div',{className:'m'},el('b',{textContent:`${r.name} · ${'★'.repeat(r.stars)}`}),el('br'),el('small',{textContent:r.brand}),el('p',{textContent:r.comment,style:'margin:.2rem 0 0'})),
+  el('button',{className:'sm g',textContent:'Delete',onclick:()=>act(()=>saveDB(d=>{d.reviews=d.reviews.filter(x=>x.id!==r.id)},'Remove review'),'Deleted')})):el('small',{textContent:'No reviews yet.'})))}
+async function act(fn,ok){try{say('Working…');await fn();draw();say('✔ '+ok+'. Live on the site in about a minute.')}catch(e){say('✖ '+(e.status===401||e.status===403?'Token rejected or lacks Contents write access — ':'')+e.message,1)}}
+$('#ubtn').onclick=()=>act(async()=>{const f=$('#uf').files[0];if(!f)throw new Error('Choose a file');if(!OK.test(f.name))throw new Error('File type not allowed');if(f.size>MAX)throw new Error('File over 25 MB');
+ const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6),ext=f.name.slice(f.name.lastIndexOf('.')).toLowerCase(),br=$('#ub').value,path=`assets/${br}/${id}${ext}`;
+ const data=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.onerror=rej;fr.readAsDataURL(f)});
+ await gh(path,{method:'PUT',body:JSON.stringify({message:'Upload '+f.name,branch:C.b,content:data})});
+ const type=/\.(png|jpe?g|webp|gif|svg)$/i.test(ext)?'image':/\.(mp4|webm)$/i.test(ext)?'video':/\.(mp3|wav|ogg|m4a)$/i.test(ext)?'audio':'file';
+ await saveDB(d=>d.items.unshift({id,brand:br,title:($('#ut').value||f.name).slice(0,80),desc:$('#ud').value.slice(0,200),platform:$('#up').value,file:path,type}),'Add '+f.name);
+ $('#uf').value='';$('#ut').value='';$('#ud').value=''},'Uploaded');
+$('#rbtn').onclick=()=>act(async()=>{if(!$('#rn').value.trim()||!$('#rc').value.trim())throw new Error('Name and comment required');
+ await saveDB(d=>d.reviews.unshift({id:Date.now().toString(36),brand:$('#rb').value,name:$('#rn').value.trim().slice(0,40),stars:+$('#rs').value,comment:$('#rc').value.trim().slice(0,240)}),'Add review');$('#rn').value='';$('#rc').value=''},'Review published');
+const tab=a=>{$('#vA').style.display=a?'':'none';$('#vR').style.display=a?'none':'';$('#tA').className='sm'+(a?' on':' g');$('#tR').className='sm'+(a?' g':' on')};
+$('#tA').onclick=()=>tab(1);$('#tR').onclick=()=>tab(0);
+async function connect(c,keep){C=c;try{say('Connecting…');const r=await fetch(`${API}/repos/${c.o}/${c.r}`,{headers:{Authorization:'Bearer '+c.t}});const j=await r.json();if(!r.ok)throw new Error(j.message);
+ if(!j.permissions||!j.permissions.push)throw new Error('This token cannot write to the repo');
+ (keep?localStorage:sessionStorage).hashAdm=JSON.stringify(c);if(!keep)localStorage.removeItem('hashAdm');
+ $('#setup').style.display='none';$('#app').style.display='';$('#who').textContent=`${c.o}/${c.r} (${c.b})`;D=(await readDB()).data;draw();say('Connected ✔')}catch(e){C=null;say('✖ '+e.message,1)}}
+$('#go').onclick=()=>{const c={o:$('#o').value.trim(),r:$('#r').value.trim(),b:$('#b').value.trim()||'main',t:$('#t').value.trim()};if(!c.o||!c.r||!c.t)return say('Fill in all fields',1);connect(c,$('#rem').checked)};
+$('#out').onclick=()=>{localStorage.removeItem('hashAdm');sessionStorage.removeItem('hashAdm');location.reload()};
+try{const s=localStorage.hashAdm||sessionStorage.hashAdm;if(s)connect(JSON.parse(s),!!localStorage.hashAdm)}catch{}
+</script></body></html>
